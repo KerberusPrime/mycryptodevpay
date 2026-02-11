@@ -10,7 +10,7 @@
 
 MyCryptoDevPay is a web-based platform that provides **transparent, data-driven salary benchmarks** specifically for the crypto/blockchain industry. 
 
-Unlike generic salary sites, we use a **rigorous points-factor evaluation methodology** (adapted from the industry-standard JobLink system) to assess roles based on their actual requirements—not just job titles.
+Unlike generic salary sites, we use a **rigorous points-factor evaluation methodology** (adapted from the industry-standard grading system) to assess roles based on their actual requirements—not just job titles.
 
 ### The Problem We Solve
 
@@ -197,7 +197,7 @@ npm run dev
 
 ### Phase 2 — Data Infrastructure
 - [ ] Supabase/Firebase backend
-- [ ] Survey data import (Radford, Pave, OpenComp)
+- [ ] Survey data import
 - [ ] Admin dashboard
 - [ ] Data export API
 
@@ -220,10 +220,7 @@ npm run dev
 
 | Source | Type | Status |
 |--------|------|--------|
-| **Radford** | Industry Survey | To be imported |
-| **Pave** | Industry Survey | To be imported |
-| **OpenComp** | Industry Survey | To be imported |
-| **Independent Survey** | Industry Survey | To be imported |
+| Industry Survey | To be imported |
 | **Community Submissions** | Crowdsourced | Live |
 
 *Survey data is kept separate and proprietary. Only aggregated results are shown.*
@@ -256,9 +253,6 @@ MIT License — Use it however you want.
 ---
 
 ## 🙏 Acknowledgments
-
-- **JobLink Points Factor System** by Aon — The foundation of our evaluation methodology
-- **Radford, Pave, OpenComp** — Industry compensation data
 - **The Crypto Community** — For contributing salary data
 
 ---
