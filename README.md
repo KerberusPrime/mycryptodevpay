@@ -35,7 +35,7 @@ An **open-source, community-powered** compensation framework that:
 
 ### The Evaluation Methodology
 
-We adapted the **JobLink Points Factor System** (used by Fortune 500 companies) for crypto:
+We adapted the **Points Factor System** (used by Fortune 500 companies) for crypto:
 
 | Factor | Weight | What It Measures |
 |--------|--------|------------------|
