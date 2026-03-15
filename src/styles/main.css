@@ -118,10 +118,105 @@ body {
 .loading-spinner { width: 40px; height: 40px; border: 3px solid var(--border-default); border-top-color: var(--accent-purple); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Methodology note on landing ──────────────────── */
+.methodology-note {
+  margin-top: 3rem;
+  padding: 1rem 1.5rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── Analysis grid (JD flow step 2) ───────────────── */
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.analysis-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.analysis-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+/* ── Factor bars (ResultsView) ────────────────────── */
+.factor-table { display: flex; flex-direction: column; gap: 0.75rem; }
+.factor-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  align-items: center;
+  gap: 1rem;
+}
+.factor-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+.factor-weight {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: 0.5rem;
+}
+.factor-bar-track {
+  height: 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.factor-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+.factor-score {
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 60px;
+  text-align: right;
+}
+
+/* ── Stage badge (ResultsView) ────────────────────── */
+.stage-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.stage-multiplier {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.stage-multiplier.positive { color: var(--accent-green); }
+.stage-multiplier.negative { color: #f87171; }
+
+/* ── Flags list ───────────────────────────────────── */
+.flags-list { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.5rem 0; }
+
 /* Responsive */
 @media (max-width: 768px) {
   .landing-title { font-size: 2rem; }
   .choice-cards { grid-template-columns: 1fr; }
   .nav-links { display: none; }
   .main-content { padding: 1.5rem 1rem; }
+  .factor-row { grid-template-columns: 1fr; gap: 0.4rem; }
+  .factor-score { text-align: left; }
+  .stage-badge { align-items: flex-start; margin-top: 0.5rem; }
 }
