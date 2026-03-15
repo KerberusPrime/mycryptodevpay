@@ -1094,6 +1094,153 @@ body {
   margin: 0 auto var(--space-6);
 }
 
+/* ── Choice cards — 5 cards (primary full-width + 2×2 grid) ── */
+.choice-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+/* ── Toast notification ───────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-full);
+  font-size: 0.875rem;
+  font-weight: 600;
+  z-index: 9999;
+  animation: toastIn 0.25s ease, toastOut 0.3s ease 2.2s forwards;
+  white-space: nowrap;
+  box-shadow: var(--shadow-lg);
+}
+
+.toast-success {
+  background: var(--success);
+  color: #fff;
+}
+
+.toast-error {
+  background: var(--danger);
+  color: #fff;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(1rem); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to   { opacity: 0; transform: translateX(-50%) translateY(1rem); }
+}
+
+/* ── Geo dropdown ─────────────────────────────────────────── */
+.geo-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+  min-width: 260px;
+  overflow: hidden;
+}
+
+.geo-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  transition: background 0.1s;
+}
+
+.geo-option:hover { background: var(--bg-hover); color: var(--text-primary); }
+.geo-option.active { background: rgba(124,58,237,0.1); color: var(--brand-light); }
+
+.geo-mul {
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.geo-option.active .geo-mul { color: var(--brand-light); }
+
+/* ── Mobile header ────────────────────────────────────────── */
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-nav {
+  display: none;
+  position: fixed;
+  top: 60px;
+  left: 0;
+  right: 0;
+  background: rgba(13, 17, 23, 0.97);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-subtle);
+  z-index: 99;
+  flex-direction: column;
+}
+
+.mobile-nav-item {
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: color 0.15s;
+}
+
+.mobile-nav-item:hover { color: var(--text-primary); background: var(--bg-elevated); }
+.mobile-nav-item.active { color: var(--brand-light); }
+
+/* ── Methodology / FAQ page ───────────────────────────────── */
+.method-factor-bar {
+  height: 6px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  flex: 1;
+}
+
+.method-factor-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+}
+
+/* ── Print styles ─────────────────────────────────────────── */
+@media print {
+  .app-header, .app-footer, .btn, .cta-card, .negotiation-card { display: none !important; }
+  .main-content { padding: 0; max-width: 100%; }
+  .card { border: 1px solid #ccc; box-shadow: none; break-inside: avoid; }
+  body { background: #fff; color: #000; }
+  .verdict-card { background: #f9f9f9; border: 1px solid #ccc; }
+  .verdict-number { color: #333; }
+  .comp-table th.col-median, .comp-table td.col-median { background: #f0e6ff; color: #333; }
+}
+
 /* ── Responsive ───────────────────────────────────────────── */
 @media (max-width: 768px) {
   .main-content { padding: var(--space-6) var(--space-4); }
@@ -1108,6 +1255,10 @@ body {
   .trust-strip { gap: var(--space-4); }
 
   .nav-links { display: none; }
+
+  .mobile-menu-btn { display: flex; }
+
+  .mobile-nav { display: flex; }
 
   .verdict-number { font-size: 2.5rem; }
   .verdict-number-section { flex-direction: column; gap: var(--space-2); }
@@ -1124,4 +1275,6 @@ body {
 
   .how-it-works { flex-direction: column; align-items: center; }
   .how-step-arrow { transform: rotate(90deg); }
+
+  .geo-dropdown { right: auto; left: 0; }
 }

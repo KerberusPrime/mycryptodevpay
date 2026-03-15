@@ -1,6 +1,28 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
-export default function LandingChoice({ onSelect }) {
+function getSubmissionCount() {
+  try {
+    const stored = localStorage.getItem('mcdp_submissions')
+    if (!stored) return 0
+    return JSON.parse(stored).length
+  } catch {
+    return 0
+  }
+}
+
+export default function LandingChoice({ onSelect, submissionCount: propCount }) {
+  const [subCount, setSubCount] = useState(propCount ?? 0)
+
+  useEffect(() => {
+    // Also read from localStorage in case prop isn't provided yet
+    const local = getSubmissionCount()
+    setSubCount(Math.max(propCount ?? 0, local))
+  }, [propCount])
+
+  const displayCount = subCount > 0
+    ? `${subCount.toLocaleString()} salary data point${subCount !== 1 ? 's' : ''} contributed`
+    : '7 job families · 24 specialties'
+
   return (
     <div className="landing-container">
 
@@ -35,7 +57,7 @@ export default function LandingChoice({ onSelect }) {
           </div>
           <div className="trust-item">
             <span className="trust-dot" />
-            7 job families · 24 specialties
+            {displayCount}
           </div>
         </div>
       </div>
@@ -63,7 +85,7 @@ export default function LandingChoice({ onSelect }) {
           </div>
         </div>
 
-        {/* Secondary: Manual */}
+        {/* Manual Select */}
         <div className="choice-card" onClick={() => onSelect('dropdown')}>
           <div className="choice-icon">🎯</div>
           <div className="choice-body">
@@ -76,7 +98,33 @@ export default function LandingChoice({ onSelect }) {
           </div>
         </div>
 
-        {/* Secondary: Submit */}
+        {/* Check My Offer */}
+        <div className="choice-card" onClick={() => onSelect('offer-check')}>
+          <div className="choice-icon">💰</div>
+          <div className="choice-body">
+            <h3 className="choice-title">Check My Offer</h3>
+            <p className="choice-description">
+              Have an offer in hand? Enter the numbers and see exactly where it lands
+              in the market distribution — with a negotiation gap analysis.
+            </p>
+            <span className="tag tag-success">Offer Analysis</span>
+          </div>
+        </div>
+
+        {/* Token Calculator */}
+        <div className="choice-card" onClick={() => onSelect('token-calc')}>
+          <div className="choice-icon">🪙</div>
+          <div className="choice-body">
+            <h3 className="choice-title">Token Grant Calculator</h3>
+            <p className="choice-description">
+              Convert your token allocation into a risk-adjusted annual comp figure.
+              Handles vesting, cliff, lock-ups, and pre-TGE discounts.
+            </p>
+            <span className="tag tag-warning">Token Valuation</span>
+          </div>
+        </div>
+
+        {/* Submit */}
         <div className="choice-card" onClick={() => onSelect('submit')}>
           <div className="choice-icon">🤝</div>
           <div className="choice-body">
@@ -85,7 +133,7 @@ export default function LandingChoice({ onSelect }) {
               Anonymous submissions improve accuracy for everyone. Data only
               surfaces once 5+ people have contributed for a role.
             </p>
-            <span className="tag tag-success">Help the Community</span>
+            <span className="tag tag-muted">Help the Community</span>
           </div>
         </div>
 
