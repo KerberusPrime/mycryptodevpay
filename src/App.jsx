@@ -141,7 +141,6 @@ export default function App() {
       case 'offer-check':
         return (
           <OfferCheckFlow
-            initialEvaluation={evaluationData}
             onBack={() => navigateTo(evaluationData ? 'results' : 'landing')}
           />
         )

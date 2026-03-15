@@ -4,6 +4,7 @@ import {
   marketCapRanges, fundingRanges, treasuryRanges,
 } from '../data/jobCatalog.js'
 import StepProgress from './StepProgress.jsx'
+import { evaluateRole } from '../utils/evaluationEngine.js'
 
 const STEPS = [
   { label: 'Your Offer' },
@@ -225,7 +226,7 @@ function OfferResult({ offerAmount, evaluation }) {
   )
 }
 
-export default function OfferCheckFlow({ onComplete, onBack }) {
+export default function OfferCheckFlow({ onBack }) {
   const [step, setStep]                                 = useState(1)
   const [offerText, setOfferText]                       = useState('')
   const [family, setFamily]                             = useState('')
@@ -248,19 +249,15 @@ export default function OfferCheckFlow({ onComplete, onBack }) {
   const step3Complete  = companyStage && companySizeIndicator
 
   const handleGetResults = () => {
-    onComplete({
-      level,
-      family,
-      subfamily,
-      familyName:          jobFamilies[family].name,
-      subfamilyName:       jobFamilies[family].subfamilies[subfamily].name,
+    const result = evaluateRole({ level, family, subfamily, companyStage, companySizeIndicator })
+    setEvaluation({
+      ...result,
+      familyName:    jobFamilies[family].name,
+      subfamilyName: jobFamilies[family].subfamilies[subfamily].name,
       isCryptoNative,
       isSecurityRole,
-      companyStage,
-      companySizeIndicator,
-      offerAmount,
-      sourceFlow: 'offer-check',
     })
+    setStep(4)
   }
 
   return (
@@ -401,6 +398,21 @@ export default function OfferCheckFlow({ onComplete, onBack }) {
               style={{ flex: 1 }}
             >
               Analyze My Offer →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step 4: Results ───────────────────────── */}
+      {step === 4 && evaluation && (
+        <div>
+          <OfferResult offerAmount={offerAmount} evaluation={evaluation} />
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+            <button className="btn btn-ghost" onClick={() => { setStep(1); setEvaluation(null) }}>
+              ← Check another offer
+            </button>
+            <button className="btn btn-ghost" onClick={onBack}>
+              Back
             </button>
           </div>
         </div>
