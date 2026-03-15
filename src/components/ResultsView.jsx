@@ -1,5 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { levelPointRanges } from '../data/jobCatalog.js'
+import { GEO_REGIONS, applyGeoMultiplier } from '../utils/geoAdjuster.js'
+import { buildShareURL, copyToClipboard } from '../utils/urlState.js'
 
 // ── Helpers ──────────────────────────────────────────────────
 const fmt  = n => '$' + Math.round(n).toLocaleString()
@@ -7,11 +9,11 @@ const fmtK = n => '$' + Math.round(n / 1000) + 'K'
 const pct  = n => (n * 100).toFixed(0) + '%'
 
 const FACTOR_META = [
-  { key: 'know',    label: 'Knowledge & Application', weight: '30%', color: 'var(--factor-knowledge)',     desc: 'Depth of expertise required and how it\'s applied' },
-  { key: 'prob',    label: 'Problem Solving',          weight: '15%', color: 'var(--factor-problem)',      desc: 'Complexity and ambiguity of challenges faced' },
-  { key: 'inter',   label: 'Interaction',              weight: '15%', color: 'var(--factor-interaction)',  desc: 'Communication, influence and stakeholder management' },
-  { key: 'impact',  label: 'Impact',                   weight: '30%', color: 'var(--factor-impact)',       desc: 'Organizational scope and effect of the role' },
-  { key: 'account', label: 'Accountability',           weight: '10%', color: 'var(--factor-accountability)',desc: 'Financial and resource responsibility' },
+  { key: 'know',    label: 'Knowledge & Application', weight: '30%', color: 'var(--factor-knowledge)',      desc: 'Depth of expertise required and how it\'s applied' },
+  { key: 'prob',    label: 'Problem Solving',          weight: '15%', color: 'var(--factor-problem)',       desc: 'Complexity and ambiguity of challenges faced' },
+  { key: 'inter',   label: 'Interaction',              weight: '15%', color: 'var(--factor-interaction)',   desc: 'Communication, influence and stakeholder management' },
+  { key: 'impact',  label: 'Impact',                   weight: '30%', color: 'var(--factor-impact)',        desc: 'Organizational scope and effect of the role' },
+  { key: 'account', label: 'Accountability',           weight: '10%', color: 'var(--factor-accountability)', desc: 'Financial and resource responsibility' },
 ]
 
 const STAGE_LABELS = {
@@ -32,13 +34,10 @@ function getNegotiationGuide(level, percentiles, effectiveMul) {
   const baseShare = percentiles.p50.base
   const ltiShare  = percentiles.p50.lti
 
-  const isAboveMarket  = effectiveMul >= 1.08
-  const isBelowMarket  = effectiveMul <= 0.80
-  const isExecLevel    = ['D1','D2','VP'].includes(level)
   const isEarlyStage   = effectiveMul <= 0.85
+  const isExecLevel    = ['D1','D2','VP'].includes(level)
 
   const points = []
-
   points.push(`The negotiation sweet spot for this role is ${fmt(p25)} – ${fmt(p75)} total comp, with ${fmt(median)} as the market anchor.`)
 
   if (isEarlyStage) {
@@ -71,8 +70,44 @@ function FactorBar({ value, color }) {
   )
 }
 
-export default function ResultsView({ evaluation, onBack, onSubmitData }) {
-  const [showFactors, setShowFactors] = useState(false)
+// Count-up hook for hero number animation
+function useCountUp(target, duration = 1000) {
+  const [value, setValue] = useState(0)
+  const rafRef = useRef(null)
+
+  useEffect(() => {
+    if (!target) return
+    const start = Date.now()
+    const animate = () => {
+      const elapsed = Date.now() - start
+      const progress = Math.min(elapsed / duration, 1)
+      // Ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setValue(Math.round(target * eased))
+      if (progress < 1) rafRef.current = requestAnimationFrame(animate)
+    }
+    rafRef.current = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [target, duration])
+
+  return value
+}
+
+// Toast hook
+function useToast() {
+  const [toast, setToast] = useState(null)
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 2500)
+  }
+  return { toast, showToast }
+}
+
+export default function ResultsView({ evaluation, onBack, onSubmitData, onCompare, onTokenCalc }) {
+  const [showFactors, setShowFactors]   = useState(false)
+  const [geo, setGeo]                   = useState('us-other')
+  const [showGeoMenu, setShowGeoMenu]   = useState(false)
+  const { toast, showToast }            = useToast()
 
   if (!evaluation) return null
 
@@ -80,10 +115,17 @@ export default function ResultsView({ evaluation, onBack, onSubmitData }) {
     level, familyName, subfamilyName,
     isCryptoNative, isSecurityRole,
     factors, totalPoints, grade,
-    percentiles, mix,
+    percentiles: rawPercentiles, mix,
     stageMultiplier, sizeModifier,
     companyStage,
   } = evaluation
+
+  // Apply geo adjustment
+  const percentiles = geo === 'us-other'
+    ? rawPercentiles
+    : applyGeoMultiplier(rawPercentiles, geo)
+
+  const geoRegion = GEO_REGIONS.find(r => r.code === geo) ?? GEO_REGIONS.find(r => r.code === 'us-other')
 
   const range      = levelPointRanges[level]
   const stageLabel = STAGE_LABELS[companyStage] ?? companyStage
@@ -94,20 +136,95 @@ export default function ResultsView({ evaluation, onBack, onSubmitData }) {
   const mulDisplay   = mulPct > 0 ? `+${mulPct}%` : `${mulPct}%`
   const mulClass     = mulPct >= 0 ? 'positive' : 'negative'
 
-  // Percentile bar geometry: p25 left edge, p90 right edge, p50 marker
-  const barMin = percentiles.p25.total
-  const barMax = percentiles.p90.total
+  // Percentile bar geometry
+  const barMin  = percentiles.p25.total
+  const barMax  = percentiles.p90.total
   const barSpan = barMax - barMin
-  const p50Pos = barSpan > 0 ? ((percentiles.p50.total - barMin) / barSpan) * 100 : 50
-
-  // p25 and p75 range within the bar
-  const rangeLeft  = 0
+  const p50Pos  = barSpan > 0 ? ((percentiles.p50.total - barMin) / barSpan) * 100 : 50
   const rangeRight = barSpan > 0 ? ((percentiles.p75.total - barMin) / barSpan) * 100 : 75
+
+  // Count-up hero number
+  const animatedTotal = useCountUp(percentiles.p50.total, 900)
 
   const negotiationGuide = getNegotiationGuide(level, percentiles, effectiveMul)
 
+  const handleShare = async () => {
+    const url = buildShareURL({
+      level,
+      family: evaluation.family,
+      subfamily: evaluation.subfamily,
+      companyStage,
+      companySizeIndicator: evaluation.companySizeIndicator,
+      geo,
+    })
+    await copyToClipboard(url)
+    showToast('Link copied to clipboard!')
+  }
+
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+
+      {/* ── Toast ────────────────────────────────────────── */}
+      {toast && (
+        <div className={`toast toast-${toast.type}`}>
+          {toast.type === 'success' ? '✓' : '!'} {toast.msg}
+        </div>
+      )}
+
+      {/* ── Top action bar ───────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <button className="btn btn-ghost" onClick={onBack} style={{ padding: '0.5rem 0.875rem' }}>
+          ← New search
+        </button>
+
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {/* Geo toggle */}
+          <div style={{ position: 'relative' }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setShowGeoMenu(m => !m)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              🌍 {geoRegion.shortName} ▾
+            </button>
+            {showGeoMenu && (
+              <div className="geo-dropdown">
+                {GEO_REGIONS.map(r => (
+                  <div
+                    key={r.code}
+                    className={`geo-option ${r.code === geo ? 'active' : ''}`}
+                    onClick={() => { setGeo(r.code); setShowGeoMenu(false) }}
+                  >
+                    <span>{r.name}</span>
+                    <span className="geo-mul">{(r.multiplier * 100).toFixed(0)}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {onCompare && (
+            <button className="btn btn-secondary btn-sm" onClick={onCompare}>
+              ⇄ Compare Roles
+            </button>
+          )}
+
+          <button className="btn btn-secondary btn-sm" onClick={handleShare}>
+            ↗ Share Results
+          </button>
+        </div>
+      </div>
+
+      {/* Geo banner if non-default */}
+      {geo !== 'us-other' && (
+        <div className="alert alert-info" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span>📍</span>
+          <span>
+            Showing <strong>{geoRegion.name}</strong> rates ({(geoRegion.multiplier * 100).toFixed(0)}% of US baseline).
+            {' '}{geoRegion.note}
+          </span>
+        </div>
+      )}
 
       {/* ── Verdict / Hero Card ──────────────────────────── */}
       <div className="verdict-card">
@@ -123,7 +240,7 @@ export default function ResultsView({ evaluation, onBack, onSubmitData }) {
 
         {/* Hero number */}
         <div className="verdict-number-section">
-          <div className="verdict-number">{fmt(percentiles.p50.total)}</div>
+          <div className="verdict-number">{fmt(animatedTotal)}</div>
           <div className="verdict-number-context">
             <div className="verdict-number-label">Market Median · Total Compensation</div>
             <div className="verdict-number-sublabel">
@@ -145,15 +262,10 @@ export default function ResultsView({ evaluation, onBack, onSubmitData }) {
           </div>
 
           <div className="percentile-bar-track">
-            {/* p25–p75 filled range */}
             <div
               className="percentile-bar-range"
-              style={{
-                left:  `${rangeLeft}%`,
-                width: `${rangeRight - rangeLeft}%`,
-              }}
+              style={{ left: '0%', width: `${rangeRight}%` }}
             />
-            {/* Median marker */}
             <div
               className="percentile-bar-median"
               style={{ left: `${p50Pos}%` }}
@@ -185,8 +297,8 @@ export default function ResultsView({ evaluation, onBack, onSubmitData }) {
       <div className="card">
         <h3 className="card-title">
           Annual Compensation Breakdown
-          <span style={{ marginLeft: 'auto', font: 'normal 0.78rem/1 var(--text-muted)', color: 'var(--text-muted)', fontWeight: 400 }}>
-            USD · Stage-adjusted
+          <span style={{ marginLeft: 'auto', font: 'normal 0.78rem/1 var(--font-body)', color: 'var(--text-muted)', fontWeight: 400 }}>
+            USD · Stage-adjusted{geo !== 'us-other' ? ` · ${geoRegion.shortName}` : ''}
           </span>
         </h3>
 
@@ -209,9 +321,7 @@ export default function ResultsView({ evaluation, onBack, onSubmitData }) {
               <td>{fmt(percentiles.p90.base)}</td>
             </tr>
             <tr>
-              <td>
-                Annual Bonus <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>(STI)</span>
-              </td>
+              <td>Annual Bonus <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>(STI)</span></td>
               <td>{fmt(percentiles.p25.sti)}</td>
               <td className="col-median">{fmt(percentiles.p50.sti)}</td>
               <td>{fmt(percentiles.p75.sti)}</td>
@@ -220,6 +330,14 @@ export default function ResultsView({ evaluation, onBack, onSubmitData }) {
             <tr>
               <td>
                 Equity / Tokens <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>(LTI annualized)</span>
+                {onTokenCalc && (
+                  <button
+                    onClick={onTokenCalc}
+                    style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--brand-light)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}
+                  >
+                    → Calculate token value
+                  </button>
+                )}
               </td>
               <td>{fmt(percentiles.p25.lti)}</td>
               <td className="col-median">{fmt(percentiles.p50.lti)}</td>
@@ -240,9 +358,9 @@ export default function ResultsView({ evaluation, onBack, onSubmitData }) {
         <div style={{ marginTop: '1.25rem' }}>
           <p className="card-label">Pay Mix at Median</p>
           <div className="pay-mix-bar">
-            <div className="pay-mix-base"    style={{ flex: mix.base }} />
-            <div className="pay-mix-sti"     style={{ flex: mix.sti  }} />
-            <div className="pay-mix-lti"     style={{ flex: mix.lti  }} />
+            <div className="pay-mix-base" style={{ flex: mix.base }} />
+            <div className="pay-mix-sti"  style={{ flex: mix.sti  }} />
+            <div className="pay-mix-lti"  style={{ flex: mix.lti  }} />
           </div>
           <div className="pay-mix-legend">
             <div className="pay-mix-item">
@@ -270,14 +388,30 @@ export default function ResultsView({ evaluation, onBack, onSubmitData }) {
 
       {/* ── Negotiation Guide ────────────────────────────── */}
       <div className="negotiation-card">
-        <div className="negotiation-title">
-          💬 Negotiation Guide
-        </div>
+        <div className="negotiation-title">💬 Negotiation Guide</div>
         <ul className="negotiation-points">
           {negotiationGuide.map((point, i) => (
             <li key={i}>{point}</li>
           ))}
         </ul>
+      </div>
+
+      {/* ── Quick Actions ─────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+        {onCompare && (
+          <div className="card" style={{ padding: '1.25rem', textAlign: 'center', cursor: 'pointer', marginBottom: 0 }} onClick={onCompare}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.4rem' }}>⇄</div>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.25rem' }}>Compare Roles</div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>See how this role stacks up</div>
+          </div>
+        )}
+        {onTokenCalc && (
+          <div className="card" style={{ padding: '1.25rem', textAlign: 'center', cursor: 'pointer', marginBottom: 0 }} onClick={onTokenCalc}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.4rem' }}>🪙</div>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.25rem' }}>Token Calculator</div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Convert your grant to comp value</div>
+          </div>
+        )}
       </div>
 
       {/* ── Points-Factor Score (collapsible) ────────────── */}
@@ -297,7 +431,6 @@ export default function ResultsView({ evaluation, onBack, onSubmitData }) {
           </span>
         </div>
 
-        {/* Always show summary bar */}
         <div className="points-bar-wrap" style={{ marginTop: '1rem' }}>
           <div className="points-bar-track">
             <div className="points-bar-fill" style={{ width: `${(totalPoints / 1000) * 100}%` }} />
@@ -357,10 +490,6 @@ export default function ResultsView({ evaluation, onBack, onSubmitData }) {
           Contribute Your Salary →
         </button>
       </div>
-
-      <button className="btn btn-ghost" onClick={onBack} style={{ marginTop: '0.5rem' }}>
-        ← Start a new search
-      </button>
 
     </div>
   )
